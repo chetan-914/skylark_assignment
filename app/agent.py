@@ -13,7 +13,7 @@ class DroneAgent:
         self.client = genai.Client(api_key=settings.google_api_key)
         
         # 2. Set the correct model ID (Gemini 2.0 Flash is the latest stable)
-        self.model_id = "gemini-2.0-flash"
+        self.model_id = "gemini-2.5-flash"
         
         # 3. Setup Tool Configuration
         # In the new SDK, 'automatic_function_calling' handles the execution loop for you.

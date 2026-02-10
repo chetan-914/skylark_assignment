@@ -112,11 +112,18 @@ class AssignmentService:
                 conflicts=drone_issues
             )
         
+        # Calculate available_from date (1 day after mission end)
+        from datetime import timedelta
+        available_from_date = None
+        if mission.end_date:
+            available_from_date = mission.end_date + timedelta(days=1)
+        
         # Update sheets
-        pilot_updated = self.sheets.update_pilot_status(
+        pilot_updated = self.sheets.update_pilot_assignment(
             pilot.pilot_id, 
             "assigned", 
-            mission_id
+            mission_id,
+            available_from_date
         )
         
         drone_updated = self.sheets.update_drone_status(
@@ -128,7 +135,7 @@ class AssignmentService:
         if pilot_updated and drone_updated:
             return AssignmentResult(
                 success=True,
-                message=f"Successfully assigned {pilot.name} and {drone.drone_id} to mission {mission_id}",
+                message=f"Successfully assigned {pilot.name} and {drone.drone_id} to mission {mission_id}. Pilot available from {available_from_date.strftime('%Y-%m-%d') if available_from_date else 'N/A'}",
                 assigned_pilot=pilot.name,
                 assigned_drone=drone.drone_id
             )

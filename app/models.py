@@ -5,26 +5,24 @@ from enum import Enum
 
 
 class PilotStatus(str, Enum):
-    AVAILABLE = "Available"
-    ASSIGNED = "Assigned"
-    ON_LEAVE = "On Leave"
+    AVAILABLE = "available"
+    ASSIGNED = "assigned"
+    ON_LEAVE = "on_leave"
     # TRAINING = "training"
 
 
 class DroneStatus(str, Enum):
-    AVAILABLE = "Available"
+    AVAILABLE = "available"
     IN_USE = "in_use"
-    MAINTENANCE = "Maintenance"
+    MAINTENANCE = "maintenance"
     # RETIRED = "retired"
 
 
 class Priority(str, Enum):
-    # LOW = "low"
-    # MEDIUM = "medium"
-    # CRITICAL = "critical"
-    HIGH = "High"
-    URGENT = "Urgent"
-    STANDARD = "Standard"
+    LOW = "low"
+    MEDIUM = "medium"
+    HIGH = "high"
+    CRITICAL = "critical"
 
 
 class Pilot(BaseModel):

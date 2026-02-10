@@ -65,8 +65,14 @@ class SheetsService:
         
         return pilots
     
-    def update_pilot_status(self, pilot_id: str, status: str, assignment: Optional[str] = None) -> bool:
-        """Update pilot status in Google Sheets"""
+    def update_pilot_assignment(
+        self, 
+        pilot_id: str, 
+        status: str, 
+        assignment: Optional[str] = None,
+        available_from: Optional[datetime] = None
+    ) -> bool:
+        """Update pilot status, assignment, and available_from date in Google Sheets"""
         try:
             cell = self.pilot_sheet.find(pilot_id)
             if cell:
@@ -76,6 +82,9 @@ class SheetsService:
                 # Update assignment (column 7)
                 if assignment is not None:
                     self.pilot_sheet.update_cell(row, 7, assignment)
+                # Update available_from (column 8)
+                if available_from is not None:
+                    self.pilot_sheet.update_cell(row, 8, available_from.strftime('%Y-%m-%d'))
                 return True
         except Exception as e:
             print(f"Error updating pilot: {e}")

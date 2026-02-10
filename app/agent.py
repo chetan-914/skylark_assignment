@@ -1,102 +1,62 @@
-import google.generativeai as genai
+from google import genai
+from google.genai import types
 from typing import List, Dict, Any
 import json
 from app.config import get_settings
 from app.tools import TOOLS, ToolExecutor
 
-
 class DroneAgent:
     def __init__(self):
         settings = get_settings()
-        genai.configure(api_key=settings.google_api_key)
+        
+        # 1. Initialize the new Client
+        self.client = genai.Client(api_key=settings.google_api_key)
+        
+        # 2. Set the correct model ID (Gemini 2.0 Flash is the latest stable)
+        self.model_id = "gemini-2.0-flash"
+        
+        # 3. Setup Tool Configuration
+        # In the new SDK, 'automatic_function_calling' handles the execution loop for you.
+        # Note: 'TOOLS' should be a list of the actual Python functions from your tools.py
+        self.config = types.GenerateContentConfig(
+            tools=TOOLS,
+            automatic_function_calling=types.AutomaticFunctionCallingConfig(
+                disable=False
+            )
+        )
+        
+        # 4. Create a chat session to maintain history automatically
+        self._setup_session()
 
-        self.model = genai.GenerativeModel(
-            'gemini-2.5-flash',
-            tools=TOOLS
+    def _setup_session(self):
+        """Internal helper to initialize or restart the chat session"""
+        self.chat_session = self.client.chats.create(
+            model=self.model_id,
+            config=self.config
         )
 
-        self.tool_executor = ToolExecutor()
-        self.chat_history = []
-
-    def _execute_function_call(self, function_call) -> str:
-        """Execute function call and return result"""
-        function_name = function_call.name
-        function_args = {}
-        
-        # Extract arguments
-        for key, value in function_call.args.items():
-            function_args[key] = value
-        
-        # Execute tool
-        result = self.tool_executor.execute(function_name, function_args)
-        
-        return result
-    
     def chat(self, user_message: str) -> str:
-        """Send message to agent and get response"""
-        
-        # Add user message to history
-        self.chat_history.append({
-            "role": "user",
-            "parts": [user_message]
-        })
-        
-        # Start chat with history
-        chat = self.model.start_chat(history=self.chat_history[:-1])
-        
-        # Send message
-        response = chat.send_message(user_message)
-        
-        # Handle function calls
-        max_iterations = 5
-        iteration = 0
-        
-        while iteration < max_iterations:
-            # Check if there are function calls
-            if not response.candidates[0].content.parts:
-                break
+        """
+        Send message to agent and get response.
+        The SDK handles function calls and history internally.
+        """
+        try:
+            # Send message to the session
+            response = self.chat_session.send_message(user_message)
             
-            function_calls = [
-                part.function_call 
-                for part in response.candidates[0].content.parts 
-                if hasattr(part, 'function_call') and part.function_call
-            ]
+            # The SDK automatically executes tools and re-prompts the model 
+            # until a final text response is generated.
+            return response.text
             
-            if not function_calls:
-                break
-            
-            # Execute all function calls
-            function_responses = []
-            for fc in function_calls:
-                result = self._execute_function_call(fc)
-                function_responses.append({
-                    "function_call": fc,
-                    "function_response": {
-                        "name": fc.name,
-                        "response": {"result": result}
-                    }
-                })
-            
-            # Send function results back
-            response = chat.send_message([
-                genai.protos.Part(
-                    function_response=genai.protos.FunctionResponse(
-                        name=fr["function_call"].name,
-                        response={"result": fr["function_response"]["response"]["result"]}
-                    )
-                )
-                for fr in function_responses
-            ])
-            
-            iteration += 1
-        
-        # Get final text response
-        final_response = response.text
-        
-        # Update history
-        self.chat_history.append({
-            "role": "model",
-            "parts": [final_response]
-        })
-        
-        return final_response
+        except Exception as e:
+            print(f"Error in DroneAgent.chat: {str(e)}")
+            return f"I encountered an error processing your request: {str(e)}"
+
+    def reset(self):
+        """Reset chat history by creating a fresh session"""
+        self._setup_session()
+        return "Chat history reset."
+
+    def get_history(self):
+        """Optional: Helper to view current session history"""
+        return self.chat_session.history

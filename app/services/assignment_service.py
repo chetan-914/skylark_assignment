@@ -1,6 +1,6 @@
 from typing import Optional, List, Tuple
 from app.models import Pilot, Drone, Mission, AssignmentResult, Priority
-from app.services.sheets_services import SheetsService
+from app.services.sheets_service import SheetsService
 from app.services.conflict_detector import ConflictDetector
 
 

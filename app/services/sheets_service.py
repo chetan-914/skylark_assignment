@@ -1,3 +1,5 @@
+import json
+import os
 import gspread
 from google.oauth2.service_account import Credentials
 from typing import List, Dict, Optional
@@ -14,10 +16,16 @@ class SheetsService:
             'https://www.googleapis.com/auth/drive'
         ]
 
-        creds = Credentials.from_service_account_file(
-            settings.google_sheets_credentials_path,
-            scopes=scopes
-        )
+        creds_json = os.environ.get("GOOGLE_SHEETS_JSON")
+
+        if creds_json:
+            service_account_info = json.loads(creds_json)
+            creds = Credentials.from_service_account_info(service_account_info, scopes=scopes)
+        else:
+            creds = Credentials.from_service_account_file(
+                settings.google_sheets_credentials_path,
+                scopes=scopes
+            )
 
         self.client = gspread.authorize(creds)
 

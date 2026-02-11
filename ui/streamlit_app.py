@@ -1,14 +1,37 @@
 import streamlit as st
 import requests
 import os
+import time
 
-# Config
-API_URL = os.getenv("API_URL", "http://localhost:8000")
+# 1. Improved Config
+# When running in Docker, the UI talks to the API via localhost
+API_URL = os.getenv("API_URL", "http://127.0.0.1:8000")
 
-st.set_page_config(page_title="🚁 Drone Fleet Manager", page_icon="🚁")
+st.set_page_config(
+    page_title="Skylark Drone Manager", 
+    page_icon="🚁",
+    layout="wide" # Use wide layout for better data viewing
+)
+
+# Custom Styling for a cleaner look
+st.markdown("""
+    <style>
+    .stChatMessage { border-radius: 10px; margin-bottom: 10px; }
+    .stSpinner { text-align: center; }
+    </style>
+    """, unsafe_allow_resolve_html=True)
 
 st.title("🚁 Drone Fleet AI Manager")
-st.caption("AI-powered pilot and drone assignment system")
+st.caption("Strategic Pilot Assignment & Mission Conflict Detection System")
+
+# 2. Check Backend Health
+def check_backend():
+    try:
+        # We assume the root or /chat exists
+        response = requests.get(API_URL.replace("/chat", ""), timeout=2)
+        return True
+    except:
+        return False
 
 # Initialize session state
 if "messages" not in st.session_state:
@@ -19,20 +42,22 @@ for message in st.session_state.messages:
     with st.chat_message(message["role"]):
         st.markdown(message["content"])
 
-# Chat input
-if prompt := st.chat_input("Ask me about pilots, drones, or missions..."):
-    # Add user message
+# 3. Chat Input Logic
+if prompt := st.chat_input("Ask about pilots, drones, or mission assignments..."):
+    # Display user message immediately
     st.session_state.messages.append({"role": "user", "content": prompt})
     with st.chat_message("user"):
         st.markdown(prompt)
     
     # Get AI response
     with st.chat_message("assistant"):
-        with st.spinner("Thinking..."):
+        with st.spinner("Consulting Fleet Database..."):
             try:
+                # Ensure timeout is long enough for AI tool execution (Google Sheets can be slow)
                 response = requests.post(
                     f"{API_URL}/chat",
-                    json={"message": prompt}
+                    json={"message": prompt},
+                    timeout=60 
                 )
                 
                 if response.status_code == 200:
@@ -40,31 +65,50 @@ if prompt := st.chat_input("Ask me about pilots, drones, or missions..."):
                     st.markdown(ai_response)
                     st.session_state.messages.append({"role": "assistant", "content": ai_response})
                 else:
-                    st.error(f"Error: {response.text}")
+                    st.error(f"Backend Error ({response.status_code}): {response.text}")
+            except requests.exceptions.ConnectionError:
+                st.error("Connection Error: UI could not reach the Backend API.")
+                st.info(f"Checking {API_URL}... Make sure the FastAPI server is running.")
             except Exception as e:
-                st.error(f"Connection error: {str(e)}")
-                st.info("Make sure FastAPI server is running on port 8000")
+                st.error(f"Unexpected Error: {str(e)}")
 
 # Sidebar
 with st.sidebar:
-    st.header("Quick Actions")
+    st.image("https://cdn-icons-png.flaticon.com/512/3120/3120301.png", width=100)
+    st.header("Fleet Control")
     
-    if st.button("🔄 Reset Conversation"):
+    # Status Indicator
+    if check_backend():
+        st.success("API System: Online")
+    else:
+        st.error("API System: Offline")
+
+    if st.button("🔄 Clear Chat History", use_container_width=True):
         try:
             requests.post(f"{API_URL}/reset")
             st.session_state.messages = []
+            st.success("Memory cleared!")
+            time.sleep(1)
             st.rerun()
         except:
-            st.error("Could not reset")
+            st.error("Reset failed. Is the API running?")
     
     st.divider()
     
-    st.markdown("""
-    ### Example Commands
-    - "Show me available pilots"
-    - "Find pilots with commercial license in Boston"
-    - "Assign pilot to mission M001"
-    - "Check conflicts for mission M002"
-    - "List all missions"
-    - "Show drones with thermal imaging in NYC"
-    """)
+    st.markdown("### 📋 Command Guide")
+    with st.expander("Resource Queries"):
+        st.markdown("""
+        - "List all available pilots"
+        - "Show drones in New York"
+        - "Which pilots have 'thermal' skills?"
+        """)
+    
+    with st.expander("Mission Operations"):
+        st.markdown("""
+        - "Show current missions"
+        - "Check conflicts for Mission M102"
+        - "Assign resources to Mission M105"
+        """)
+    
+    st.divider()
+    st.caption("v1.2 | Connected to Google Sheets & Groq/Gemini")

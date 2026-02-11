@@ -1,16 +1,18 @@
 FROM python:3.11-slim
 
-WORKDIR /app
+WORKDIR /code
 
-# Install dependencies
-COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+COPY ./requirements.txt /code/requirements.txt
+RUN pip install --no-cache-dir --upgrade -r /code/requirements.txt
 
-# Copy application
-COPY . .
+COPY ./app /code/app
+COPY ./ui /code/ui
+COPY ./main.py /code/main.py
+COPY ./start.sh /code/start.sh
 
-# Expose port
-EXPOSE 8000
+RUN chmod +x /code/start.sh
 
-# Run both FastAPI and Streamlit (we'll use FastAPI only for App Runner)
-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
+# HF Spaces uses 7860
+EXPOSE 7860
+
+CMD ["/code/start.sh"]
